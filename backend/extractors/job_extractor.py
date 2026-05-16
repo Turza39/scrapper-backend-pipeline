@@ -6,32 +6,44 @@ from .base import BaseExtractor
 
 class JobPostingExtractor(BaseExtractor):
     """Extract job posting data from HTML/JSON"""
-    
+
     def __init__(self):
         super().__init__()
-        self.source_type = "html"
-    
-    async def extract(self, content: str) -> Optional[Dict[str, Any]]:
-        """Extract job posting data"""
+
+    async def extract(self, content: str, content_type: str = 'html') -> Optional[Dict[str, Any]]:
+        """Extract job posting data."""
+        self.reset_state()
         try:
-            # Try JSON first
-            try:
-                data = json.loads(content)
-                if self._is_job_schema(data):
-                    self.set_source_type("json")
-                    self.set_confidence(0.95)
-                    return self._normalize_job_data(data)
-            except:
-                pass
-            
-            # Fall back to HTML parsing
-            soup = BeautifulSoup(content, 'html.parser')
-            extracted = self._extract_from_html(soup)
-            
-            if extracted:
-                self.set_confidence(0.70)
-                return extracted
-            
+            if content_type == 'json':
+                # Prefer JSON when the response is JSON.
+                try:
+                    data = json.loads(content)
+                    if self._is_job_schema(data):
+                        self.set_source_type('json')
+                        self.set_confidence(0.95)
+                        return self._normalize_job_data(data)
+                except json.JSONDecodeError:
+                    # If JSON is invalid, fall back to HTML.
+                    content_type = 'html'
+
+            if content_type == 'html':
+                soup = BeautifulSoup(content, 'html.parser')
+                extracted = self._extract_from_html(soup)
+                if extracted:
+                    self.set_source_type('html')
+                    self.set_confidence(0.70)
+                    return extracted
+
+                # If HTML parsing fails, but the text still looks like JSON, try JSON.
+                try:
+                    data = json.loads(content)
+                    if self._is_job_schema(data):
+                        self.set_source_type('json')
+                        self.set_confidence(0.90)
+                        return self._normalize_job_data(data)
+                except json.JSONDecodeError:
+                    pass
+
             return None
         except Exception as e:
             print(f"Error in job extraction: {e}")

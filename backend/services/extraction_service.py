@@ -26,24 +26,30 @@ class ExtractionService:
             'url': url,
             'data': None,
             'error': None,
+            'source_type': None,
+            'confidence': None,
+            'missing_fields': [],
         }
         
         # Process extraction (in MVP, this is synchronous for simplicity)
         try:
-            # Fetch content
-            html_content = await self.fetcher.fetch_html(url)
+            self.extractor.reset_state()
             
-            if not html_content:
+            # Fetch content
+            fetch_result = await self.fetcher.fetch_content(url)
+            if not fetch_result:
                 self.jobs_store[job_id]['status'] = 'failed'
-                self.jobs_store[job_id]['error'] = 'Failed to fetch URL'
+                self.jobs_store[job_id]['error'] = 'Fetch failed'
                 return job_id
             
-            # Extract data
-            extracted_data = await self.extractor.extract(html_content)
+            # Extract data using the detected content type.
+            extracted_data = await self.extractor.extract(fetch_result.content, fetch_result.content_type)
             
             if not extracted_data:
                 self.jobs_store[job_id]['status'] = 'failed'
-                self.jobs_store[job_id]['error'] = 'Failed to extract data'
+                self.jobs_store[job_id]['error'] = 'Extraction returned no data'
+                self.jobs_store[job_id]['source_type'] = self.extractor.source_type
+                self.jobs_store[job_id]['confidence'] = self.extractor.confidence
                 return job_id
             
             # Validate data
@@ -59,6 +65,8 @@ class ExtractionService:
         except Exception as e:
             self.jobs_store[job_id]['status'] = 'failed'
             self.jobs_store[job_id]['error'] = str(e)
+            self.jobs_store[job_id]['source_type'] = self.extractor.source_type
+            self.jobs_store[job_id]['confidence'] = self.extractor.confidence
         
         return job_id
     

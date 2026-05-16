@@ -571,6 +571,207 @@ Visualize:
 
 * observability stack
 * monitoring dashboards
+
+---
+
+# Current Development Setup
+
+## Project Structure
+
+The project now includes a modern frontend built with React and a containerized deployment setup:
+
+```
+docker/
+├── backend/
+│   └── Dockerfile          # Python/FastAPI backend
+├── frontend/
+│   └── Dockerfile          # React frontend
+└── README.md               # Docker setup guide
+frontend/
+├── src/
+│   ├── components/         # React components
+│   ├── App.js              # Main app component
+│   ├── index.js            # Entry point
+│   └── *.css               # Component styles
+├── public/
+│   └── index.html          # HTML template
+├── package.json            # Dependencies
+└── README.md               # Frontend guide
+nginx/
+└── nginx.conf              # Reverse proxy configuration
+docker-compose.yml          # Multi-service orchestration
+```
+
+## Quick Start
+
+### Prerequisites
+* Docker
+* Docker Compose
+* Node.js 18+ (for local frontend development)
+* Python 3.11+ (for local backend development)
+
+### Running with Docker Compose
+
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+### Access Points
+
+| Service | URL | Purpose |
+|---------|-----|---------|
+| Frontend | http://localhost | React UI for data extraction |
+| Backend API | http://localhost:8000 | FastAPI endpoints |
+| Swagger Docs | http://localhost/docs | Interactive API documentation |
+| ReDoc | http://localhost/redoc | Alternative API documentation |
+| Nginx | http://localhost:80 | Reverse proxy / load balancer |
+
+### Services Overview
+
+#### Backend
+- **Image**: Python 3.11 slim
+- **Port**: 8000
+- **Dockerfile**: `docker/backend/Dockerfile`
+- **Features**: FastAPI, CORS enabled, hot-reload support
+
+#### Frontend
+- **Image**: Node 18 alpine (multi-stage build)
+- **Port**: 3000
+- **Dockerfile**: `docker/frontend/Dockerfile`
+- **Features**: React 18, responsive UI, API integration
+
+#### Nginx
+- **Image**: Official Nginx alpine
+- **Ports**: 80, 443
+- **Routes**:
+  - `/` → Frontend
+  - `/api/` → Backend
+  - `/docs`, `/redoc` → Backend documentation
+
+## Local Development
+
+### Backend Development
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the server
+python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+API will be available at `http://localhost:8000`
+
+### Frontend Development
+
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start dev server
+npm start
+```
+
+App will open at `http://localhost:3000`
+
+## Building Docker Images
+
+### Build Backend Image
+```bash
+docker build -f docker/backend/Dockerfile -t scraper-backend:latest .
+```
+
+### Build Frontend Image
+```bash
+docker build -f docker/frontend/Dockerfile -t scraper-frontend:latest .
+```
+
+### Run Containers Individually
+
+```bash
+# Backend
+docker run -p 8000:8000 scraper-backend:latest
+
+# Frontend
+docker run -p 3000:3000 scraper-frontend:latest
+```
+
+## Future Enhancements
+
+To enable database and Redis:
+
+1. Uncomment in `docker-compose.yml`:
+   ```yaml
+   postgres:
+     image: postgres:16-alpine
+     ...
+   
+   redis:
+     image: redis:7-alpine
+     ...
+   ```
+
+2. Update backend environment in `docker-compose.yml`:
+   ```yaml
+   environment:
+     DATABASE_URL: postgresql://user:password@postgres:5432/extraction_db
+     REDIS_URL: redis://redis:6379
+   ```
+
+3. Restart services:
+   ```bash
+   docker-compose down && docker-compose up -d
+   ```
+
+## Troubleshooting
+
+### Port Already in Use
+```bash
+# Find and kill process using port 8000
+lsof -i :8000 | grep LISTEN | awk '{print $2}' | xargs kill -9
+```
+
+### Container Fails to Start
+```bash
+# Check logs
+docker-compose logs backend
+docker-compose logs frontend
+
+# Rebuild without cache
+docker-compose up -d --build
+```
+
+### Network Issues
+```bash
+# Inspect network
+docker network ls
+docker network inspect scraper-network
+```
+
+---
+
+# Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+# License
+
+This project is open source and available under the MIT License.
 * system metrics
 
 ---
