@@ -1,1055 +1,396 @@
-# Structured Data Extraction Engine
+````md
+# Real-Time Streaming Intelligence Platform (RTSIP)
 
-## Project Vision
+A scalable backend system for processing **live or recorded audio streams** (podcasts, interviews, meetings) into **real-time structured insights**, including:
+- live transcription
+- speaker segmentation (diarization)
+- semantic event extraction
+- real-time dashboards
+- API + MCP tool integration (future phase)
 
-Build a scalable, asynchronous, fault-tolerant backend platform capable of:
-
-* fetching data from websites/APIs/documents,
-* extracting meaningful structured information,
-* normalizing and validating extracted content,
-* processing jobs asynchronously,
-* exposing extraction services through APIs,
-* and preparing the architecture for future large-scale deployment.
-
-This project is not intended to be a simple scraper.
-
-The long-term goal is to design a reusable:
-
-# Intelligent Extraction Infrastructure
-
-that can later evolve into:
-
-* job intelligence systems,
-* document intelligence systems,
-* meeting intelligence pipelines,
-* ETL/data engineering platforms,
-* enterprise data processing services,
-* or AI-powered extraction products.
+This project simulates how modern streaming intelligence systems (like Zoom AI, analytics engines, and observability pipelines) work — but in a simplified, learner-friendly architecture.
 
 ---
 
-# Core Objectives
+# 🎯 Project Goal
 
-The system should:
+Build a **real-time event processing pipeline** that:
 
-* support multiple extraction strategies,
-* work asynchronously,
-* remain modular and extensible,
-* tolerate failures gracefully,
-* scale horizontally later,
-* provide structured JSON outputs,
-* and maintain clean backend architecture.
-
----
-
-# Initial Domain Focus
-
-The initial extraction target will be:
-
-## Job Posting Extraction
-
-The engine should extract:
-
-* title
-* company
-* location
-* salary
-* skills
-* requirements
-* work mode
-* experience
-* posting date
-* job description
-* and whatever might be there. no compromise on while extracting data
-
-from:
-
-* public job websites
-* job APIs
-* dynamically rendered pages
-* embedded JSON data
+- ingests audio (live or recorded)
+- splits it into chunks
+- transcribes using Groq API (Whisper)
+- identifies speakers (pyannote or heuristic MVP)
+- extracts meaningful events (decisions, actions, topics)
+- streams results to frontend via WebSockets
+- exposes structured APIs for external integration
+- evolves into an MCP-compatible tool server
 
 ---
 
-# Long-Term Architecture Goal
+# ⚙️ Core Principles
+
+- Stream-first architecture (not request-response)
+- Async processing everywhere
+- Modular pipeline design
+- Fault-tolerant but simple MVP
+- Real-time observable system (dashboard-driven)
+- Cloud-light (no GPU required)
+
+---
+
+# 🧠 High-Level Architecture
 
 ```text
-Raw Input
-(URL/API/Document)
+Audio Input (Upload / Stream)
         ↓
-Fetcher Layer
+Chunking Service (5–15 sec segments)
         ↓
-Content Detection
+Queue Layer (Async processing)
         ↓
-Extraction Strategy
+Transcription (Groq Whisper API)
         ↓
-Normalization
+Diarization (pyannote / heuristic MVP)
         ↓
-Validation
+Event Extraction (rules-based → optional NLP)
         ↓
-Structured JSON
+Event Stream Dispatcher
         ↓
-Storage/API
-```
+WebSocket Gateway
+        ↓
+Frontend Dashboard + API + MCP Layer
+````
 
 ---
 
-# Technology Stack
+# 🧰 Tech Stack
 
 ## Backend
 
 * FastAPI
-* Python
+* Python asyncio
 
-## Scraping & Fetching
+## Streaming
 
-* Playwright
-* BeautifulSoup4
-* lxml
-* httpx
-* aiohttp
+* WebSockets
 
-## Queue & Workers
+## Queue (optional in MVP)
 
-* Celery
-* Redis
+* Redis (or in-memory async queue initially)
+
+## Transcription
+
+* Groq Whisper API (primary choice)
+
+## Speaker Diarization
+
+* pyannote.audio (preferred)
+* fallback: heuristic segmentation (silence-based)
 
 ## Database
 
 * PostgreSQL
 
-## Validation
+## Frontend
 
-* Pydantic
-
-## Logging
-
-* Loguru / Structlog
+* React + WebSocket dashboard
 
 ## Deployment
 
 * Docker
-* Docker Compose
-* Nginx
-
-## Monitoring (Later Phase)
-
-* Prometheus
-* Grafana
-
-## Future Technologies
-
-* Kafka
-* spaCy
-* Whisper
-* LLM-based extraction
+* Nginx (reverse proxy)
 
 ---
 
-# System Design Principles
-
-## 1. Separation of Concerns
-
-Fetching, extraction, normalization, validation, storage, and APIs must remain independent.
-
-Bad:
-
-```python
-extract_everything()
-```
-
-Good:
-
-```text
-Fetch
- ↓
-Extract
- ↓
-Normalize
- ↓
-Validate
- ↓
-Store
-```
+# 🪜 Roadmap (Phases)
 
 ---
 
-## 2. Asynchronous Processing
+# 🟢 Phase 0 — System Design (Planning)
 
-Heavy extraction must never block request threads.
+### Goals
 
-Users should receive:
-
-```json
-{
-  "job_id": "..."
-}
-```
-
-and poll for results later.
-
----
-
-## 3. Stateless APIs
-
-FastAPI instances should remain stateless.
-
-State must be stored in:
-
-* PostgreSQL
-* Redis
-
-This allows horizontal scaling.
-
----
-
-## 4. Modular Extractors
-
-Use extractor adapters.
-
-Example:
-
-```python
-class BaseExtractor:
-    async def extract(self, content):
-        pass
-```
-
-Then:
-
-```python
-class LinkedInExtractor(BaseExtractor):
-    pass
-```
-
-```python
-class BDJobsExtractor(BaseExtractor):
-    pass
-```
-
----
-
-## 5. Best-Effort Extraction
-
-The engine should never fail entirely because of missing fields.
-
-Example:
-
-```json
-{
-  "salary": null,
-  "skills": ["Python"],
-  "missing_fields": ["salary"]
-}
-```
-
----
-
-## 6. Retry & Fault Tolerance
-
-The system must tolerate:
-
-* network failures
-* timeout failures
-* parsing failures
-* partial extraction
-* temporary service unavailability
-
----
-
-## 7. Extensibility
-
-The architecture should later support:
-
-* PDFs
-* DOCX files
-* OCR
-* audio transcription
-* meeting intelligence
-* semantic extraction
-* LLM-assisted extraction
-
-without major redesign.
-
----
-
-# Phase-by-Phase Roadmap
-
-# Phase 0 — Planning & Architecture
-
-## Goals
-
-* Define system boundaries
-* Design extraction pipeline
-* Design database schema
+* Define pipeline architecture
+* Define event types
 * Define API contracts
-* Plan job lifecycle
-* Define failure handling strategy
+* Design database schema
 
-## Deliverables
+### Deliverables
 
-* architecture diagrams
-* database schema draft
-* extraction pipeline diagram
-* API endpoint design
+* architecture diagram
+* event schema design
+* API specification
 * folder structure
 
 ---
 
-# Phase 1 — Core Extraction Engine (MVP)
+# 🟢 Phase 1 — Core Backend + Chunking Engine
 
-## Goals
+### Features
 
-Build the first working extraction engine.
+* FastAPI server setup
+* audio upload endpoint
+* audio chunking (5–15 sec segments)
+* basic async processing pipeline
 
-## Features
+### Deliverables
 
-### FastAPI Endpoints
-
-* POST `/extract`
-* GET `/status/{job_id}`
-* GET `/result/{job_id}`
-* GET `/health`
-
----
-
-### Fetching Layer
-
-Implement:
-
-* static HTML fetching
-* dynamic rendering with Playwright
-* embedded JSON extraction
-* basic API fetching
+* working backend API
+* chunk generator
+* simple processing pipeline (no AI yet)
 
 ---
 
-### Extraction Layer
+# 🟢 Phase 2 — Transcription Engine (Groq Integration)
 
-Implement:
+### Features
 
-* HTML parsing
-* regex extraction
-* CSS selector extraction
-* metadata extraction
-* JSON parsing
+* integrate Groq Whisper API
+* send chunks → receive transcripts
+* merge chunk transcripts
 
----
+### Deliverables
 
-### Validation Layer
-
-Use:
-
-* Pydantic schemas
-
-Validate:
-
-* required fields
-* types
-* normalization
+* real-time transcription pipeline
+* structured transcript stream
 
 ---
 
-### PostgreSQL Integration
+# 🟢 Phase 3 — Speaker Handling (Diarization Layer)
 
-Store:
+### Features
 
-* extraction jobs
-* extraction results
-* errors
-* logs
+* integrate pyannote.audio OR heuristic fallback
+* assign speaker labels per segment
+* align speaker + transcript
 
----
+### Deliverables
 
-## Deliverables
-
-* working extraction pipeline
-* asynchronous FastAPI APIs
-* PostgreSQL persistence
-* Dockerized environment
+* speaker-aware transcript stream
 
 ---
 
-# Phase 2 — Background Workers & Queues
+# 🟢 Phase 4 — Event Extraction Engine
 
-## Goals
+### Features
 
-Move heavy extraction to asynchronous workers.
+* rule-based NLP extraction:
 
-## Features
+  * decisions
+  * action items
+  * topics
+  * questions
+* structured JSON event generation
 
-### Celery Integration
+### Example Output
 
-Use:
-
-* Celery
-* Redis
-
----
-
-### Queue-Based Processing
-
-Workflow:
-
-```text
-Client
- ↓
-FastAPI
- ↓
-Redis Queue
- ↓
-Celery Worker
- ↓
-PostgreSQL
+```json
+{
+  "type": "decision",
+  "text": "Deploy next week",
+  "speaker": "Speaker 1",
+  "timestamp": "00:12:01"
+}
 ```
 
----
+### Deliverables
 
-### Add
-
-* retry handling
-* timeout handling
-* job status tracking
-* exponential backoff
-* dead task handling
+* structured event pipeline
 
 ---
 
-## Deliverables
+# 🟢 Phase 5 — Real-Time WebSocket Streaming
 
-* distributed task processing
-* stable async job execution
-* retry-capable workers
+### Features
 
----
+* push events live to frontend
+* stream:
 
-# Phase 3 — Production-Oriented Architecture
+  * transcript updates
+  * speaker updates
+  * extracted events
 
-## Goals
+### Deliverables
 
-Improve robustness and maintainability.
-
-## Features
-
-### Logging
-
-Implement structured logging.
-
-Track:
-
-* request IDs
-* job IDs
-* errors
-* execution time
-* extraction strategy used
+* real-time UI feed
+* event streaming gateway
 
 ---
 
-### Rate Limiting
+# 🟢 Phase 6 — Dashboard (Frontend)
 
-Protect against abuse.
+### Features
 
----
+* live transcript view
+* speaker timeline
+* event stream panel
+* system metrics panel
 
-### Caching
+### Deliverables
 
-Use Redis caching for repeated URLs.
-
----
-
-### Health Checks
-
-Endpoints:
-
-* `/health`
-* `/metrics`
+* React dashboard
+* WebSocket integration
 
 ---
 
-### Error Categorization
+# 🟢 Phase 7 — Storage Layer
 
-Examples:
+### Features
 
-* fetch_error
-* timeout_error
-* parsing_error
-* validation_error
+* PostgreSQL integration
+* store:
 
----
+  * transcripts
+  * events
+  * session data
 
-## Deliverables
+### Deliverables
 
-* stable backend architecture
-* robust error handling
-* production-ready logging
+* persistent system state
 
 ---
 
-# Phase 4 — Deployment
+# 🟡 Phase 8 — Observability Layer (Optional but Strong)
 
-## Goals
+### Features
 
-Deploy publicly for showcase purposes.
-
-## Stack
-
-```text
-Nginx
- ↓
-FastAPI
- ↓
-Redis
- ↓
-Celery Workers
- ↓
-PostgreSQL
-```
-
----
-
-## Deployment Tasks
-
-* Docker Compose setup
-* Nginx reverse proxy
-* environment variable management
-* HTTPS setup
-* production configs
-
----
-
-## Free Deployment Targets
-
-Possible options:
-
-* Render
-* Railway
-* Fly.io
-
----
-
-## Deliverables
-
-* publicly accessible API
-* deployed extraction engine
-* API documentation
-
----
-
-# Phase 5 — Monitoring & Observability
-
-## Goals
-
-Monitor system performance and failures.
-
-## Features
-
-### Prometheus Metrics
-
-Track:
-
-* request latency
-* queue size
-* worker failures
-* extraction success rate
-* retries
-* processing time
-
----
-
-### Grafana Dashboards
-
-Visualize:
-
-* API traffic
-* worker health
-* extraction performance
-* system load
-
----
-
-## Deliverables
-
-* observability stack
-* monitoring dashboards
-
----
-
-# Current Development Setup
-
-## Project Structure
-
-The project now includes a modern frontend built with React and a containerized deployment setup:
-
-```
-docker/
-├── backend/
-│   └── Dockerfile          # Python/FastAPI backend
-├── frontend/
-│   └── Dockerfile          # React frontend
-└── README.md               # Docker setup guide
-frontend/
-├── src/
-│   ├── components/         # React components
-│   ├── App.js              # Main app component
-│   ├── index.js            # Entry point
-│   └── *.css               # Component styles
-├── public/
-│   └── index.html          # HTML template
-├── package.json            # Dependencies
-└── README.md               # Frontend guide
-nginx/
-└── nginx.conf              # Reverse proxy configuration
-docker-compose.yml          # Multi-service orchestration
-```
-
-## Quick Start
-
-### Prerequisites
-* Docker
-* Docker Compose
-* Node.js 18+ (for local frontend development)
-* Python 3.11+ (for local backend development)
-
-### Running with Docker Compose
-
-```bash
-# Start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
-```
-
-### Access Points
-
-| Service | URL | Purpose |
-|---------|-----|---------|
-| Frontend | http://localhost | React UI for data extraction |
-| Backend API | http://localhost:8000 | FastAPI endpoints |
-| Swagger Docs | http://localhost/docs | Interactive API documentation |
-| ReDoc | http://localhost/redoc | Alternative API documentation |
-| Nginx | http://localhost:80 | Reverse proxy / load balancer |
-
-### Services Overview
-
-#### Backend
-- **Image**: Python 3.11 slim
-- **Port**: 8000
-- **Dockerfile**: `docker/backend/Dockerfile`
-- **Features**: FastAPI, CORS enabled, hot-reload support
-
-#### Frontend
-- **Image**: Node 18 alpine (multi-stage build)
-- **Port**: 3000
-- **Dockerfile**: `docker/frontend/Dockerfile`
-- **Features**: React 18, responsive UI, API integration
-
-#### Nginx
-- **Image**: Official Nginx alpine
-- **Ports**: 80, 443
-- **Routes**:
-  - `/` → Frontend
-  - `/api/` → Backend
-  - `/docs`, `/redoc` → Backend documentation
-
-## Local Development
-
-### Backend Development
-
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the server
-python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-API will be available at `http://localhost:8000`
-
-### Frontend Development
-
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start dev server
-npm start
-```
-
-App will open at `http://localhost:3000`
-
-## Building Docker Images
-
-### Build Backend Image
-```bash
-docker build -f docker/backend/Dockerfile -t scraper-backend:latest .
-```
-
-### Build Frontend Image
-```bash
-docker build -f docker/frontend/Dockerfile -t scraper-frontend:latest .
-```
-
-### Run Containers Individually
-
-```bash
-# Backend
-docker run -p 8000:8000 scraper-backend:latest
-
-# Frontend
-docker run -p 3000:3000 scraper-frontend:latest
-```
-
-## Future Enhancements
-
-To enable database and Redis:
-
-1. Uncomment in `docker-compose.yml`:
-   ```yaml
-   postgres:
-     image: postgres:16-alpine
-     ...
-   
-   redis:
-     image: redis:7-alpine
-     ...
-   ```
-
-2. Update backend environment in `docker-compose.yml`:
-   ```yaml
-   environment:
-     DATABASE_URL: postgresql://user:password@postgres:5432/extraction_db
-     REDIS_URL: redis://redis:6379
-   ```
-
-3. Restart services:
-   ```bash
-   docker-compose down && docker-compose up -d
-   ```
-
-## Troubleshooting
-
-### Port Already in Use
-```bash
-# Find and kill process using port 8000
-lsof -i :8000 | grep LISTEN | awk '{print $2}' | xargs kill -9
-```
-
-### Container Fails to Start
-```bash
-# Check logs
-docker-compose logs backend
-docker-compose logs frontend
-
-# Rebuild without cache
-docker-compose up -d --build
-```
-
-### Network Issues
-```bash
-# Inspect network
-docker network ls
-docker network inspect scraper-network
-```
-
----
-
-# Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-# License
-
-This project is open source and available under the MIT License.
 * system metrics
+* latency tracking
+* processing stats
+
+### Tools
+
+* Prometheus
+* Grafana
 
 ---
 
-# Phase 6 — Intelligent Extraction
+# 🟡 Phase 9 — MCP / Tool Server Integration
 
-## Goals
+### Features
 
-Introduce semantic extraction.
+* expose system as tool server
+* allow external agents to query:
 
-## Features
+  * transcripts
+  * events
+  * summaries
 
-### spaCy Integration
-
-Extract:
-
-* organizations
-* locations
-* skills
-* dates
-* entities
-
----
-
-### Normalization Pipelines
-
-Examples:
-
-```text
-Remote
-WFH
-Anywhere
-```
-
-Normalize into:
+### Example
 
 ```json
 {
-  "work_mode": "remote"
+  "tool": "get_meeting_summary",
+  "input": "session_id"
 }
 ```
 
 ---
 
-### Optional LLM Fallback
+# 🔵 Phase 10 — Advanced Enhancements (Future)
 
-Workflow:
-
-```text
-Rule extraction confidence low
-        ↓
-LLM extraction fallback
-```
-
----
-
-## Deliverables
-
-* intelligent extraction layer
-* semantic normalization
-* confidence scoring
-
----
-
-# Phase 7 — Multi-Input Expansion
-
-## Goals
-
-Expand beyond websites.
-
-## Future Input Types
-
-* PDFs
-* DOCX
-* OCR documents
-* meeting transcripts
-* audio/video
-
----
-
-## Future Technologies
-
-### Document Processing
-
-* pymupdf
-* pdfplumber
-* python-docx
-
----
-
-### OCR
-
-* pytesseract
-* PaddleOCR
-
----
-
-### Audio/Meeting Intelligence
-
-* Whisper
-* speaker diarization
-* summarization
-
----
-
-## Deliverables
-
-* document extraction pipelines
-* multi-input support
-
----
-
-# Phase 8 — Large-Scale Event-Driven Architecture
-
-## Goals
-
-Prepare for enterprise-scale workloads.
-
-## Future Stack
-
-* Kafka
+* continuous live streaming (WebRTC)
+* better diarization models
+* semantic summarization (LLM)
+* multi-stream support
+* Kafka-based event streaming
 * distributed workers
-* event streaming
-* analytics consumers
 
 ---
 
-## Example Future Architecture
+# 📡 API Design (Initial MVP)
+
+## Upload Audio
+
+```
+POST /upload
+```
+
+## Start Processing
+
+```
+POST /process/{session_id}
+```
+
+## Get Status
+
+```
+GET /status/{session_id}
+```
+
+## WebSocket Stream
+
+```
+ws://localhost:8000/stream/{session_id}
+```
+
+---
+
+# 📊 Event Types
+
+System emits structured events:
+
+* transcription_chunk
+* speaker_segment
+* decision_detected
+* action_item_detected
+* topic_update
+* system_metrics
+
+---
+
+# 🧱 Folder Structure
 
 ```text
-API
- ↓
-Kafka
- ├── Extraction Workers
- ├── Analytics Workers
- ├── NLP Workers
- └── Monitoring Workers
+backend/
+│
+├── api/
+├── core/
+│   ├── chunker/
+│   ├── transcriber/
+│   ├── diarization/
+│   ├── extractor/
+│
+├── services/
+├── workers/
+├── models/
+├── db/
+├── websocket/
+├── utils/
 ```
 
 ---
 
-# Suggested Project Structure
+# 🚀 Key Learning Outcomes
 
-```text
-project/
-│
-├── backend/
-│   ├── api/
-│   ├── core/
-│   ├── extractors/
-│   ├── fetchers/
-│   ├── normalizers/
-│   ├── validators/
-│   ├── workers/
-│   ├── services/
-│   ├── models/
-│   ├── db/
-│   ├── logging/
-│   └── monitoring/
-│
-├── frontend/
-│
-├── docker/
-│
-├── nginx/
-│
-├── tests/
-│
-└── docs/
-```
+By completing this project, you will understand:
+
+* real-time backend architecture
+* streaming data pipelines
+* async system design
+* event-driven architecture
+* WebSocket systems
+* AI API integration
+* modular backend design
+* production-style system thinking
 
 ---
 
-# Minimal Frontend Requirements
+# 🧠 Final Vision
 
-The frontend is NOT the priority.
+This is NOT just an audio tool.
 
-Only build:
+It evolves into:
 
-* URL input field
-* extraction trigger button
-* job status viewer
-* JSON result viewer
-
-Possible stack:
-
-* React
-* TailwindCSS
-
----
-
-# API Design (Initial)
-
-## POST `/extract`
-
-Input:
-
-```json
-{
-  "url": "https://example.com/job/123"
-}
-```
-
-Response:
-
-```json
-{
-  "job_id": "abc123",
-  "status": "queued"
-}
-```
-
----
-
-## GET `/status/{job_id}`
-
-Response:
-
-```json
-{
-  "status": "processing"
-}
-```
-
----
-
-## GET `/result/{job_id}`
-
-Response:
-
-```json
-{
-  "status": "success",
-  "source_type": "embedded_json",
-  "confidence": 0.92,
-  "data": {
-    "title": "Backend Engineer",
-    "skills": ["Python", "FastAPI"]
-  },
-  "missing_fields": ["salary"]
-}
-```
-
----
-
-# Important Engineering Goals
-
-This project should demonstrate:
-
-* backend engineering
-* asynchronous architecture
-* distributed processing
-* scalable system design
-* fault tolerance
-* structured extraction
-* ETL principles
-* API architecture
-* deployment engineering
-* observability
-* clean modular design
-
----
-
-# Final Long-Term Goal
-
-The final vision is NOT:
-
-> “a web scraper.”
-
-The final vision is:
-
-# A Reusable Intelligent Data Processing Infrastructure
+> A Real-Time Streaming Intelligence Infrastructure
 
 capable of powering:
 
-* extraction services
-* analytics systems
-* AI pipelines
-* document intelligence systems
-* organizational knowledge platforms
-* enterprise automation workflows
+* meeting intelligence systems
+* podcast analytics
+* live event monitoring
+* AI agent tools (MCP)
+* structured knowledge extraction pipelines
+
+```
+
+
