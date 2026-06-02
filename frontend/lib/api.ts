@@ -64,3 +64,13 @@ export function getWsUrl(sessionId: string): string {
   const wsBase = process.env.NEXT_PUBLIC_WS_BASE_URL ?? 'ws://localhost:8000';
   return `${wsBase}/stream/${sessionId}`;
 }
+
+export async function getTranscript(sessionId: string): Promise<{ session_id: string; transcript: string | null }> {
+  if (USE_MOCK) {
+    return { session_id: sessionId, transcript: `Mock transcript for ${sessionId}` };
+  }
+
+  const res = await fetch(`${BASE_URL}/transcript/${sessionId}`);
+  if (!res.ok) throw new Error(`Transcript fetch failed: ${res.statusText}`);
+  return res.json();
+}

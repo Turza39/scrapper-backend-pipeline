@@ -6,6 +6,7 @@ import styles from './TranscriptView.module.css';
 
 interface TranscriptViewProps {
   messages: TranscriptMessage[];
+  onMarkMessageOld?: (id: string) => void;
 }
 
 interface MessageRowProps {
@@ -76,7 +77,7 @@ const MessageRow: React.FC<MessageRowProps> = ({ message, onTypewriteComplete })
   );
 };
 
-export const TranscriptView: React.FC<TranscriptViewProps> = ({ messages }) => {
+export const TranscriptView: React.FC<TranscriptViewProps> = ({ messages, onMarkMessageOld }) => {
   const [pinToBottom, setPinToBottom] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -143,6 +144,7 @@ export const TranscriptView: React.FC<TranscriptViewProps> = ({ messages }) => {
                   if (pinToBottom) {
                     scrollToBottom();
                   }
+                  onMarkMessageOld?.(msg.id);
                 }}
               />
             ))}

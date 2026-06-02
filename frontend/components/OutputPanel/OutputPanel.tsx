@@ -11,6 +11,7 @@ interface OutputPanelProps {
   messages: TranscriptMessage[];
   events: ExtractedEvent[];
   rawEvents: StreamEvent[];
+  onMarkMessageOld?: (id: string) => void;
 }
 
 type TabType = 'transcript' | 'events' | 'json';
@@ -19,6 +20,7 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({
   messages,
   events,
   rawEvents,
+  onMarkMessageOld,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('transcript');
   const [unreadEvents, setUnreadEvents] = useState(0);
@@ -87,7 +89,9 @@ export const OutputPanel: React.FC<OutputPanelProps> = ({
       </div>
 
       <div className={styles.content}>
-        {activeTab === 'transcript' && <TranscriptView messages={messages} />}
+        {activeTab === 'transcript' && (
+          <TranscriptView messages={messages} onMarkMessageOld={onMarkMessageOld} />
+        )}
         {activeTab === 'events' && <EventsView events={events} />}
         {activeTab === 'json' && <JsonView rawEvents={rawEvents} />}
       </div>

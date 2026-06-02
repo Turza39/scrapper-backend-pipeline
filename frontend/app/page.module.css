@@ -40,3 +40,49 @@
   background: var(--bg-base);
   height: 100%;
 }
+
+.transcriptSummary {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  max-height: 240px;
+  overflow: hidden;
+}
+
+.transcriptSummaryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.transcriptSummaryMeta {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.transcriptSummaryBody {
+  max-height: 172px;
+  overflow-y: auto;
+}
+
+.transcriptSummaryText {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  font-size: 0.96rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.transcriptPlaceholder {
+  margin: 0;
+  color: var(--text-secondary);
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+}

@@ -10,7 +10,7 @@ import ProgressPanel from '@/components/ProgressPanel/ProgressPanel';
 import { OutputPanel } from '@/components/OutputPanel/OutputPanel';
 import { useSession } from '@/hooks/useSession';
 import { useMockPipeline } from '@/hooks/useMockPipeline';
-import { uploadAudio, startProcessing, ProcessOptions, getWsUrl } from '@/lib/api';
+import { uploadAudio, startProcessing, ProcessOptions, getWsUrl, getTranscript } from '@/lib/api';
 import { WsState, StreamEvent, TranscriptMessage, ExtractedEvent } from '@/types';
 import styles from './page.module.css';
 
@@ -54,8 +54,11 @@ export default function Home() {
 
           const newMsgs = event.segments!.map((seg, idx) => {
             const sIdx = nextMap[seg.speaker];
+            const id = (typeof crypto !== 'undefined' && (crypto as any).randomUUID)
+              ? (crypto as any).randomUUID()
+              : `${event.chunk_index ?? 0}-${idx}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
             return {
-              id: `${event.chunk_index ?? 0}-${idx}-${Date.now()}`,
+              id,
               speaker: seg.speaker,
               speakerIndex: sIdx,
               text: seg.text,
@@ -162,6 +165,10 @@ export default function Home() {
     };
   }, [dispatch, options.enable_event_extraction, handleEvent]);
 
+  const handleMarkMessageOld = useCallback((id: string) => {
+    setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, isNew: false } : m)));
+  }, []);
+
   // Handle uploading audio file
   const handleUpload = async (file: File) => {
     dispatch({ type: 'SET_UPLOADING' });
@@ -197,7 +204,75 @@ export default function Home() {
       if (isMockMode) {
         mockPipeline.start(session.sessionId);
       } else {
-        startRealWebSocket(session.sessionId);
+        // Instead of starting full WS pipeline (chunking/diarization/event extraction),
+        // fetch the finished transcript and emit a single transcription_chunk event
+        try {
+          const res = await getTranscript(session.sessionId);
+          const text = res.transcript || '';
+
+          // Emit pipeline step updates to mark chunking/transcription complete
+          dispatch({ type: 'UPDATE_STEP', payload: { step: 'chunking', status: 'done' } });
+          dispatch({ type: 'UPDATE_STEP', payload: { step: 'transcription', status: 'running' } });
+
+          // Build a transcription_chunk event compatible with existing handlers
+          const evt: StreamEvent = {
+            type: 'transcription_chunk',
+            timestamp: '00:00:00',
+            chunk_index: 0,
+            segments: [{ speaker: 'Speaker 1', text }],
+          };
+
+          // Make sure generated message IDs are globally unique and stable
+          const originalHandleEvent = handleEvent;
+
+          // Wrap handleEvent to create unique ids for messages
+          const wrappedEvent: StreamEvent = { ...evt };
+          // Manually append messages here using the same logic as handleEvent but with better ids
+          if (wrappedEvent.segments) {
+            setSpeakerMap((prevMap) => {
+              const nextMap = { ...prevMap };
+              // Ensure each speaker has an index
+              wrappedEvent.segments!.forEach((seg) => {
+                if (nextMap[seg.speaker] === undefined) {
+                  nextMap[seg.speaker] = Object.keys(nextMap).length;
+                }
+              });
+              return nextMap;
+            });
+
+            const newMsgs = wrappedEvent.segments!.map((seg, idx) => {
+              const id = (typeof crypto !== 'undefined' && (crypto as any).randomUUID)
+                ? (crypto as any).randomUUID()
+                : `${session.sessionId ?? 's'}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+              return {
+                id,
+                speaker: seg.speaker,
+                speakerIndex: Object.keys(speakerMap).length, // temporary; real index updated by setSpeakerMap above
+                text: seg.text,
+                timestamp: wrappedEvent.timestamp || '00:00:00',
+                isNew: false,
+              } as TranscriptMessage;
+            });
+
+            setMessages((prev) => {
+              // Avoid duplicates by filtering any messages with same text+speaker
+              const filteredPrev = prev.filter((m) => !newMsgs.some((n) => n.text === m.text && n.speaker === m.speaker));
+              return [...filteredPrev, ...newMsgs];
+            });
+          } else {
+            // fallback to original handler
+            handleEvent(evt);
+          }
+
+          // Mark transcription done and complete the pipeline
+          dispatch({ type: 'UPDATE_STEP', payload: { step: 'transcription', status: 'done' } });
+          dispatch({ type: 'UPDATE_STEP', payload: { step: 'diarization', status: 'done' } });
+          dispatch({ type: 'UPDATE_STEP', payload: { step: 'event_extraction', status: 'done' } });
+          dispatch({ type: 'UPDATE_STEP', payload: { step: 'complete', status: 'done' } });
+        } catch (err) {
+          console.error('Failed to fetch transcript:', err);
+          dispatch({ type: 'UPDATE_STEP', payload: { step: 'chunking', status: 'error' } });
+        }
       }
     } catch (err) {
       console.error(err);
@@ -277,6 +352,7 @@ export default function Home() {
             messages={messages}
             events={events}
             rawEvents={rawEvents}
+            onMarkMessageOld={handleMarkMessageOld}
           />
         </section>
       </main>
