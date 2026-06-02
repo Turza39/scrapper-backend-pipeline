@@ -1,0 +1,55 @@
+.bar {
+  flex-shrink: 0;
+  height: var(--statusbar-h);
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  gap: 12px;
+}
+
+.left,
+.right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.wsStatus {
+  color: var(--text-muted);
+}
+.wsStatus.live { color: var(--success); }
+.wsStatus.connecting { color: var(--warning); }
+.wsStatus.error { color: var(--error); }
+
+.sep {
+  color: var(--border-active);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.key {
+  color: var(--text-muted);
+}
+
+.val {
+  color: var(--text-secondary);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.progressItem {
+  color: var(--accent);
+  font-weight: 500;
+}

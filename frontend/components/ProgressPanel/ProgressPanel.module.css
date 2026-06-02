@@ -1,0 +1,125 @@
+.container {
+  padding-bottom: 8px;
+}
+
+.sectionHeader {
+  padding: 12px 16px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sectionLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+}
+
+.pct {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--accent);
+}
+
+.barTrack {
+  margin: 0 16px 14px;
+  height: 2px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.steps {
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.stepRow {
+  display: flex;
+  flex-direction: column;
+}
+
+.connector {
+  width: 1px;
+  height: 8px;
+  background: var(--border);
+  margin-left: 6px;
+  transition: background 0.3s;
+}
+
+.connectorDone {
+  background: var(--success);
+  opacity: 0.4;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.iconWrap {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 14px;
+}
+
+/* Status-based icon colors */
+.step_pending .iconWrap { color: var(--text-muted); }
+.step_running .iconWrap { color: var(--warning); }
+.step_done .iconWrap { color: var(--success); }
+.step_error .iconWrap { color: var(--error); }
+
+.stepLabel {
+  font-size: 12px;
+  color: var(--text-muted);
+  transition: color 0.2s;
+}
+
+.step_running .stepLabel { color: var(--text-secondary); }
+.step_done .stepLabel { color: var(--text-secondary); }
+.step_error .stepLabel { color: var(--error); }
+
+.spinIcon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Running dots animation */
+.runningDots {
+  display: flex;
+  gap: 3px;
+  margin-left: 2px;
+}
+
+.runningDots span {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--warning);
+  opacity: 0.4;
+  animation: dot-blink 1.2s ease-in-out infinite;
+}
+
+.runningDots span:nth-child(2) { animation-delay: 0.2s; }
+.runningDots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes dot-blink {
+  0%, 80%, 100% { opacity: 0.2; }
+  40% { opacity: 1; }
+}
